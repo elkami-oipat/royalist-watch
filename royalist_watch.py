@@ -36,7 +36,7 @@ SOURCES = [
 ]
 
 INTERVAL = 300
-USER_AGENT = "royalist-watch/2.0 (personal saved-search alert)"
+USER_AGENT = "royalist-watch/3.0 (personal saved-search alert)"
 MAX_NEW_ADS_PER_CYCLE = 40
 
 AD_RE = re.compile(r"/tori/ilmoitus/(\d+)")
@@ -156,7 +156,7 @@ def check_tori(src, state, seed_only):
         hit = matched_keywords(visible_text(page))
         if hit and ad not in hits:
             state["hits"].append(ad)
-            found.append((f"{ad_title(page)}", ad_url, hit))
+            found.append((ad_title(page), ad_url, hit))
             log("MATCH", src["name"], ad)
         time.sleep(1)
 
@@ -196,18 +196,37 @@ def selftest():
     for src in SOURCES:
         try:
             text = visible_text(fetch(src["url"]))
-            verdict = "ok" if len(text) > 2000 else "SUSPICIOUS - very little text"
+            verdict = "ok" if len(text) > 2000 else "SUSPICIOUS - little text"
             log(f"{src['name']}: {len(text)} chars - {verdict}")
         except Exception as exc:
             log(f"{src['name']}: FAILED - {exc!r}")
         time.sleep(1)
 
 
+def one_cycle(state, first_run):
+    found = []
+    for src in SOURCES:
+        if src["mode"] == "tori":
+            found += check_tori(src, state, first_run)
+        else:
+            found += check_page(src, state)
+        time.sleep(1)
+    for title, url, hit in found:
+        notify(title=f"Royalist! {title[:80]}",
+               message=f"{title}\n{url}", click=url)
+    save_state(state)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--once", action="store_true")
-    ap.add_argument("--test", action="store_true")
-    ap.add_argument("--selftest", action="store_true")
+    ap.add_argument("--once", action="store_true",
+                    help="one pass then exit")
+    ap.add_argument("--minutes", type=int, default=0,
+                    help="keep checking for this many minutes then exit")
+    ap.add_argument("--test", action="store_true",
+                    help="send a test notification")
+    ap.add_argument("--selftest", action="store_true",
+                    help="report how much text each site returns")
     args = ap.parse_args()
 
     if args.selftest:
@@ -225,26 +244,23 @@ def main():
 
     state = load_state()
     first_run = not state["seen"]
+    started = time.time()
+    deadline = started + args.minutes * 60 if args.minutes else None
 
     while True:
         try:
-            found = []
-            for src in SOURCES:
-                if src["mode"] == "tori":
-                    found += check_tori(src, state, first_run)
-                else:
-                    found += check_page(src, state)
-                time.sleep(1)
+            one_cycle(state, first_run)
             first_run = False
-            for title, url, hit in found:
-                notify(title=f"Royalist! {title[:80]}",
-                       message=f"{title}\n{url}", click=url)
-            save_state(state)
         except Exception as exc:
             log("error:", repr(exc))
+
         if args.once:
             return
-        time.sleep(INTERVAL + random.randint(0, 30))
+        nap = INTERVAL + random.randint(0, 30)
+        if deadline and time.time() + nap > deadline:
+            log(f"time budget used ({args.minutes} min), exiting cleanly")
+            return
+        time.sleep(nap)
 
 
 if __name__ == "__main__":
