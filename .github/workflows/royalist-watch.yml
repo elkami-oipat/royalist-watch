@@ -2,7 +2,7 @@ name: royalist-watch
 
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    - cron: "3 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -15,7 +15,7 @@ concurrency:
 jobs:
   check:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@v4
 
@@ -23,14 +23,15 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Check Tori for new listings
+      - name: Watch for new listings
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
           STATE_FILE: state/seen.json
           KEYWORDS: royalist
-        run: python royalist_watch.py --once
+        run: python royalist_watch.py --minutes 55
 
       - name: Save what we have seen
+        if: always()
         run: |
           git config user.name "royalist-watch"
           git config user.email "actions@users.noreply.github.com"
