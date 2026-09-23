@@ -29,7 +29,7 @@ jobs:
           STATE_FILE: state/bassrig-seen.json
           WATCH_NAME: BassRig
           SCAN_EXISTING: "true"
-          KEYWORDS: bassrig super vintage,super vintage bassrig,bassrig fifteen,bassrig fifteen bass preamp
+          KEYWORDS: bassrig,fifteen,bassrig super vintage,super vintage bassrig,bassrig fifteen,bassrig fifteen bass preamp
         run: python royalist_watch.py --minutes 55
 
       - name: Save what we have seen
