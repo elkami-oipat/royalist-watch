@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""royalist_watch.py - watch Tori + guitar shops for a keyword."""
+"""royalist_watch.py - watch Tori + guitar shops for selected gear."""
 
 import argparse
 import hashlib
@@ -15,9 +15,11 @@ import urllib.request
 NTFY_TOPIC = os.environ.get("NTFY_TOPIC", "")
 NTFY_SERVER = os.environ.get("NTFY_SERVER", "https://ntfy.sh")
 STATE_FILE = os.environ.get("STATE_FILE", "state/seen.json")
+WATCH_NAME = os.environ.get("WATCH_NAME", "Pedal watch")
+SCAN_EXISTING = os.environ.get("SCAN_EXISTING", "").lower() in ("1", "true", "yes", "on")
 
 KEYWORDS = [k.strip() for k in
-            os.environ.get("KEYWORDS", "royalist").split(",") if k.strip()]
+            os.environ.get("KEYWORDS", "bassrig super vintage,bassrig fifteen").split(",") if k.strip()]
 
 # mode "tori" = follow ad links; mode "page" = scan the page text
 SOURCES = [
@@ -36,8 +38,8 @@ SOURCES = [
 ]
 
 INTERVAL = 300
-USER_AGENT = "royalist-watch/3.0 (personal saved-search alert)"
-MAX_NEW_ADS_PER_CYCLE = 40
+USER_AGENT = "pedal-watch/4.0 (personal saved-search alert)"
+MAX_NEW_ADS_PER_CYCLE = int(os.environ.get("MAX_NEW_ADS_PER_CYCLE", "80"))
 
 AD_RE = re.compile(r"/tori/ilmoitus/(\d+)")
 TAG_RE = re.compile(r"<[^>]+>")
@@ -137,7 +139,7 @@ def check_tori(src, state, seed_only):
         if ad not in seen:
             new_ids.append(ad)
 
-    if seed_only:
+    if seed_only and not SCAN_EXISTING:
         state["seen"].extend(new_ids)
         log(f"{src['name']}: seeded {len(new_ids)} ads")
         return []
@@ -212,7 +214,7 @@ def one_cycle(state, first_run):
             found += check_page(src, state)
         time.sleep(1)
     for title, url, hit in found:
-        notify(title=f"Royalist! {title[:80]}",
+        notify(title=f"{WATCH_NAME}! {title[:80]}",
                message=f"{title}\n{url}", click=url)
     save_state(state)
 
@@ -237,7 +239,7 @@ def main():
         sys.exit("NTFY_TOPIC is not set.")
 
     if args.test:
-        notify("Royalist watch", "Test alert - notifications are working.",
+        notify(WATCH_NAME, "Test alert - notifications are working.",
                click="https://muusikoiden.net/tori/?category=55")
         log("test notification sent")
         return
