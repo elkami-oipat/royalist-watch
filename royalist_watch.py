@@ -37,7 +37,8 @@ SOURCES = [
      "url": "https://www.tonefestguitargallery.com/collections/just-in"},
 ]
 
-INTERVAL = 300
+MIN_INTERVAL = int(os.environ.get("MIN_INTERVAL", "600"))
+MAX_INTERVAL = int(os.environ.get("MAX_INTERVAL", "900"))
 USER_AGENT = "pedal-watch/4.0 (personal saved-search alert)"
 MAX_NEW_ADS_PER_CYCLE = int(os.environ.get("MAX_NEW_ADS_PER_CYCLE", "80"))
 
@@ -258,7 +259,7 @@ def main():
 
         if args.once:
             return
-        nap = INTERVAL + random.randint(0, 30)
+        nap = random.randint(MIN_INTERVAL, MAX_INTERVAL)
         if deadline and time.time() + nap > deadline:
             log(f"time budget used ({args.minutes} min), exiting cleanly")
             return
