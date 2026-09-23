@@ -1,4 +1,4 @@
-name: royalist-watch
+name: bassrig-watch
 
 on:
   schedule:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: royalist-watch
+  group: bassrig-watch
   cancel-in-progress: false
 
 jobs:
@@ -26,16 +26,18 @@ jobs:
       - name: Watch for new listings
         env:
           NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
-          STATE_FILE: state/seen.json
-          KEYWORDS: royalist
+          STATE_FILE: state/bassrig-seen.json
+          WATCH_NAME: BassRig
+          SCAN_EXISTING: "true"
+          KEYWORDS: bassrig super vintage,super vintage bassrig,bassrig fifteen,bassrig fifteen bass preamp
         run: python royalist_watch.py --minutes 55
 
       - name: Save what we have seen
         if: always()
         run: |
-          git config user.name "royalist-watch"
+          git config user.name "bassrig-watch"
           git config user.email "actions@users.noreply.github.com"
-          git add state/seen.json
+          git add state/bassrig-seen.json
           if git diff --staged --quiet; then
             echo "nothing changed"
           else
